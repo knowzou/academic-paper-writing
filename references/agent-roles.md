@@ -54,17 +54,30 @@ Core loop: Plan -> Write/Derive/Experiment -> Review (x4 parallel) -> Aggregate 
 - Merge outputs from parallel agents into a coherent draft
 - Trigger review cycles; translate review feedback into revision tasks
 - Track progress; decide when the paper meets the quality bar
+- Own local workflow state under `.paper-review/`
+- Update agent memory files under `.paper-review/memory/`
+- Persist auditable review artifacts under `.paper-review/audit/`
 
 **Decision rules**:
 - Independent theory and experiments -> dispatch in parallel
 - Review finds >3 MAJOR issues -> full revision cycle
 - Review finds only MINOR issues -> targeted fix via Writing/Layout Agent
-- All 4 reviewers have median >= 4 AND no dimension below 3 -> paper is ready
+- All 4 reviewers have median >= 4 across the 5 core dimensions AND no core dimension below 3 -> content is ready for final layout sign-off
 
 **For revising existing papers**:
 - First dispatch Review Agent on the current draft to produce a baseline assessment
 - Categorize issues by severity and affected section
 - Plan revision order: critical structural issues first, then content, then polish
+
+**Local state ownership**:
+- Initialize `.paper-review/memory/session.yaml` and `.paper-review/memory/review/current_state.yaml`
+- Rehydrate workflow state from `.paper-review/memory/` on resumed runs before creating new review rounds
+- Persist the derived `review_profile` into `.paper-review/memory/session.yaml` and treat the stored file as the canonical profile for later reviewer calls
+- Keep `.paper-review/memory/review/last_round_summary.md` limited to the previous round only
+- Maintain stable issue IDs in `.paper-review/memory/review/issues.yaml`
+- Write the current actionable fix list to `.paper-review/memory/review/revision_plan.yaml`
+- Append revision and decision records to `.paper-review/audit/`
+- Use `.paper-review/memory/review/current_state.yaml` to determine the next phase on resume instead of replaying the workflow from the top
 
 ## Review Agent
 
@@ -74,6 +87,7 @@ Core loop: Plan -> Write/Derive/Experiment -> Review (x4 parallel) -> Aggregate 
 
 **Shared Behavior** (all 4 reviewers):
 - Read the full LaTeX source (and compiled PDF if available)
+- Read the persisted `review_profile` from `.paper-review/memory/session.yaml` and apply its emphasis when weighting comments
 - Evaluate against all criteria in review-criteria.md
 - Produce a review report using the template in review-criteria.md
 - Be specific: reference exact equations, figures, tables, sections
@@ -81,25 +95,30 @@ Core loop: Plan -> Write/Derive/Experiment -> Review (x4 parallel) -> Aggregate 
 - Check every empirical claim against actual numbers in tables
 - Verify abstract matches actual contributions and results
 - Flag any notation inconsistency, overclaiming, or missing reference
+- Explicitly test whether the paper clearly distinguishes itself from the closest prior results and discusses that distinction honestly
+- Include a complete core-dimension score table, median, and explicit pass/fail in every report so the result can be archived under `.paper-review/audit/`
 
 ### Historical Reviewer (2 per round)
 
-**Additional context**: Receives the current draft AND the **aggregated summary report from the previous round only** (not the full history of all rounds).
+**Additional context**: Receives the current draft, `.paper-review/memory/session.yaml`, and the **aggregated summary report from the previous round only** (not the full history of all rounds).
 
 **Additional responsibilities**:
 - For each issue listed in the previous round's aggregated summary, explicitly check whether it has been genuinely resolved or only superficially addressed
 - Fill in the `Unresolved from last round` section of the report template
 - If a fix introduced a new problem (e.g., a rewritten proof now has a gap), flag it as a new CRITICAL issue
 - Do not re-flag issues that are cleanly resolved; acknowledge them in the `Resolved` list
+- Do not read raw reports from earlier rounds by default; rely on the prior aggregated summary only
 
 ### Fresh Reviewer (2 per round)
 
-**Additional context**: Receives only the current draft. Has no access to prior review reports.
+**Additional context**: Receives the current draft, the review rubric, and non-review-history metadata from `.paper-review/memory/session.yaml` needed to apply the active `review_profile`. Has no access to prior review reports, `.paper-review/memory/review/*`, or audit artifacts.
 
 **Additional responsibilities**:
 - Provide a fully independent assessment unanchored to previous feedback
 - Focus on issues that may have been overlooked or introduced in recent revisions
 - Leave the `Unresolved from last round` section blank (N/A)
+- In PDF-only review mode, label any theory/evidence conclusion that cannot be checked from the available artifact as `limited evidence`
+- In PDF-only review mode, treat any overall pass/fail as advisory only
 
 ## Theory Agent
 
@@ -174,16 +193,18 @@ Experiment Agent
 
 ### Pattern 1: Review-Revise Loop
 ```
-last_round_summary = None
+last_round_summary = rehydrated_last_round_summary or None
+round = rehydrated_round or 0
 
 Planner -> [Agent(s)] ->
   parallel: [Historical R1(draft+prev) | Historical R2(draft+prev) |
              Fresh R1(draft)           | Fresh R2(draft)           ]
-  -> Planner (aggregate all 4 reports, merge issues, prioritize unresolved)
+  -> Planner (persist raw reports to audit, aggregate all 4 reports, merge issues, prioritize unresolved)
+  -> Planner (write aggregated summary to audit and update memory/last_round_summary + issues ledger)
   -> [Agent(s) revise]
+  -> Planner (append revision-log + decision-log entries)
   -> last_round_summary = aggregated summary report from this round
-  -> last_round_summary = aggregated summary report from this round
-  -> repeat until all 4 reviewers have median >= 4 AND no dimension below 3, or MAX_ROUNDS reached
+  -> repeat until all 4 reviewers have median >= 4 across the 5 core dimensions AND no core dimension below 3, or MAX_ROUNDS reached
 ```
 
 ### Pattern 2: Parallel Theory + Experiments
@@ -206,5 +227,5 @@ Layout Agent -> Compile -> Check warnings -> Fix -> Compile
 
 ### Pattern 5: Final Polish
 ```
-Writing Agent -> Layout Agent -> Review Agent -> Planner (accept or iterate)
+Writing Agent -> Layout Agent -> Final layout gate -> Planner (accept or iterate)
 ```
