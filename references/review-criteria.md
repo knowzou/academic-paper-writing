@@ -74,6 +74,7 @@ Every raw reviewer report archived in `audit/reviews/round-XX/` must include:
 - reviewer type
 - round number
 - the active review profile
+- literature/novelty evidence basis for `References / Positioning` (`research-lit + novelty-check`, `no fresh literature search`, or `PDF-only / limited evidence`)
 - all 5 core-dimension scores
 - median score
 - explicit pass/fail
@@ -95,6 +96,7 @@ Every aggregated round summary archived in `audit/reviews/round-XX/aggregated-su
 - round-level pass/fail decision
 - final layout gate status if evaluated
 - evidence basis (`full source` or `PDF-only / limited evidence`)
+- literature/novelty evidence basis, including path to the saved search/novelty bundle when available
 - score deltas versus the previous round when available
 - stable issue IDs
 - resolved issues
@@ -110,6 +112,32 @@ Every aggregated round summary archived in `audit/reviews/round-XX/aggregated-su
 - Are the listed contributions actually supported later in the paper?
 - Are assumptions, limitations, and scope boundaries surfaced early enough?
 - Red flag: interesting theorem or experiment appears, but it does not support the claimed story of the paper.
+
+### Non-Technical Fresh Reviewer emphasis
+
+One Fresh Reviewer in each full review round reviews as a busy, technically adjacent reader who may not understand every proof, derivation, or implementation detail. This reviewer still completes the full score table. The compatibility rule is: comments should capture the human reading impression, and scores should summarize that impression in the required rubric format.
+
+For this reviewer, the `Story / Logic` score should be grounded in impressions such as:
+- Can the paper be understood from the title, abstract, introduction, contribution list, overview figure, and section flow?
+- Is the problem -> gap -> key idea -> technical strength -> evidence chain clear without deep technical parsing?
+- Are the contributions concrete and checkable rather than generic claims of novelty, generality, or extensive experiments?
+- Does the paper make the method feel technically strong through intuition, comparison, evidence preview, and clear limitations?
+- Do figure captions, section openings, and layout choices help a tired reviewer follow the story?
+- Would a reviewer who does not fully understand the technical details still know what the paper contributes and why it matters?
+
+Scoring guidance for this reviewer:
+- `Story / Logic` is the main score channel for reader trust, storyline smoothness, contribution clarity, and whether the paper feels concrete rather than slogan-like.
+- `Writing / Structure` should reflect prose flow, section order, caption helpfulness, and skim readability.
+- `Theory / Rigor`, `Evidence`, and `References / Positioning` should still be scored when possible, but the reviewer should label judgments as surface-level or limited when they are based on legibility and plausibility rather than deep technical verification.
+- The numeric scores should be consistent with the comments: a paper described as confusing, vague, or over-sold should not receive a high `Story / Logic` score even if the technical content may be strong.
+
+The Non-Technical Fresh Reviewer comments should be qualitative and reader-centered rather than binary. They should describe the reviewer's subjective sense of:
+- Abstract: whether the problem, gap, method idea, and key result feel concrete, memorable, and credible, or instead feel generic and slogan-like.
+- Introduction: whether the story feels naturally guided from problem -> gap -> idea -> contribution, and where the reader starts to feel lost, rushed, or unconvinced.
+- Contribution list: whether the bullets feel like real technical contributions, or like broad claims of novelty, generality, or effectiveness.
+- Main-body reading path: where concepts, acronyms, notation, assumptions, metrics, or prior-work names create friction because the reader does not yet feel oriented.
+- Vagueness impression: phrases that sound impressive but leave the reviewer wondering what the actual mechanism, condition, number, theorem, experiment, implementation detail, or limitation is.
+- Slogan-vs-substance impression: places where the paper feels like it is selling a claim instead of showing the actual process, technical design choice, or evidence chain.
 
 ## Theory & Rigor
 
@@ -175,6 +203,8 @@ Adjust proportionally for other page limits. Flag sections that deviate >50% fro
 
 ## References & Scholarly Positioning
 
+This score should be based on the draft plus a fresh literature/novelty evidence bundle produced with `research-lit` and `novelty-check`, unless the user explicitly requested a no-search/internal-only review. If no fresh search was run, mark the basis clearly and normally cap the score at 3.
+
 - Is the related work comprehensive, fair, and clearly contrasted with this paper?
 - Are the closest prior papers or theoretical results explicitly identified?
 - Does the paper state both the **formal** difference and the **substantive** difference from the closest prior work?
@@ -182,6 +212,22 @@ Adjust proportionally for other page limits. Flag sections that deviate >50% fro
 - Does it discuss remaining limitations or narrower scope relative to prior work?
 - Are citations used to support specific claims, rather than as decorative lists?
 - Red flag: the paper claims novelty but never says what the nearest competing result actually proves or shows.
+
+### Literature / novelty evidence requirements
+
+The evidence bundle should include:
+- search queries or discovery route used by `research-lit`
+- closest-prior table: citation, core claim/result, formal overlap, substantive overlap, remaining distinction
+- `novelty-check` verdict: `clear`, `partial`, `weak`, or `unclear`
+- missing citations and concrete positioning edits
+
+### Score anchors for References / Positioning
+
+- **5**: Fresh search found the closest prior work; the paper explicitly contrasts against it with formal and substantive differences, explains why the differences matter, and states remaining limitations.
+- **4**: Fresh search found no fatal overlap; closest-prior comparison is mostly clear, with minor missing citations or wording fixes.
+- **3**: Related work is plausible but incomplete, or no fresh search was run; closest-prior boundary needs major sharpening.
+- **2**: Literature search finds substantial overlap that the paper does not address, or the draft risks reading as a repackaging of known work.
+- **1**: Novelty-check indicates the core contribution is already present in prior work and the paper does not provide a credible distinction.
 
 ## Final Layout Gate
 
@@ -200,10 +246,11 @@ If only a PDF is available and source cannot be compiled, mark the layout gate a
 
 ```
 ## Reviewer Info
-- Type: [ ] Historical Reviewer  [ ] Fresh Reviewer
+- Type: [ ] Historical Reviewer  [ ] Technical Fresh Reviewer  [ ] Non-Technical Fresh Reviewer
 - Round: [N]
 - Review Profile: [focus profile + venue profile]
 - Evidence Basis: [Full source | PDF-only / limited evidence]
+- Literature / Novelty Basis: [research-lit + novelty-check | no fresh literature search | PDF-only / limited evidence]
 - Decision Strength: [Full-review decision | Advisory-only decision]
 
 ## Summary
@@ -222,6 +269,12 @@ If only a PDF is available and source cannot be compiled, mark the layout gate a
 **This reviewer passes** if: median across all 5 core dimensions >= 4 AND no single core dimension below 3.
 **Pass/Fail**: [Pass | Fail]
 **Final Layout Gate**: [Pass | Fail | N/A]
+
+## Literature / Novelty Basis
+- Evidence bundle path: [...]
+- Closest prior work checked: [...]
+- Novelty-check verdict: [clear | partial | weak | unclear]
+- How this affects References / Positioning score: [...]
 
 ## Unresolved from Last Round (Historical Reviewers only; Fresh Reviewers: N/A)
 Based on the aggregated summary from the previous round, list issues that are NOT yet resolved:
@@ -270,9 +323,10 @@ After collecting all 4 reports each round, produce a single **aggregated summary
 1. **Unresolved issues** from Historical Reviewers -> escalate one severity level (MINOR->MAJOR, MAJOR->CRITICAL, CRITICAL stays CRITICAL)
 2. **Issues flagged by 3-4 reviewers** -> CRITICAL priority regardless of original severity
 3. **Issues flagged by 2 reviewers** -> retain original severity
-4. **Issues flagged by 1 reviewer** -> downgrade one level (CRITICAL->MAJOR, MAJOR->MINOR, MINOR->low-priority); **low-priority issues are tracked but excluded from the required revision task list**
+4. **Reader-impression exception**: issues raised only by the Non-Technical Fresh Reviewer are not automatically downgraded when they affect `Story / Logic` or `Writing / Structure` through reader friction, storyline breaks, vague contributions, weak skim readability, confusing captions, or layout choices that reduce trust. Keep these in the required revision task list as Writing Agent or Layout Agent work unless the Planner explicitly defers them with a rationale.
+5. **Other issues flagged by 1 reviewer** -> downgrade one level (CRITICAL->MAJOR, MAJOR->MINOR, MINOR->low-priority); **low-priority issues are tracked but excluded from the required revision task list**
 
-**Aggregation order**: apply rule 1 (escalation) first, then rules 2-4 (multi-reviewer weighting).
+**Aggregation order**: apply rule 1 (escalation) first, then rules 2-3 (multi-reviewer weighting), then rule 4 (reader-impression exception), then rule 5 (single-reviewer downgrade).
 
 **Pass condition**: all 4 reviewers individually satisfy: median >= 4 across the 5 core dimensions AND no core dimension below 3.
 
@@ -285,8 +339,8 @@ After collecting all 4 reports each round, produce a single **aggregated summary
 |----------|---------------|----------------|----------|---------------------|--------------------------|--------|-------|
 | Historical R1 | | | | | | | |
 | Historical R2 | | | | | | | |
-| Fresh R1 | | | | | | | |
-| Fresh R2 | | | | | | | |
+| Technical Fresh | | | | | | | |
+| Non-Technical Fresh | | | | | | | |
 
 ### Round Verdict
 - Overall pass/fail: ...
@@ -296,8 +350,8 @@ After collecting all 4 reports each round, produce a single **aggregated summary
 ### Score Deltas vs Previous Round
 - Historical R1: ...
 - Historical R2: ...
-- Fresh R1: ...
-- Fresh R2: ...
+- Technical Fresh: ...
+- Non-Technical Fresh: ...
 
 ### Top Priority Issues (after aggregation)
 [CRITICAL] ISSUE-### ...

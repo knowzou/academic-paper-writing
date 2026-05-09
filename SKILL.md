@@ -231,11 +231,15 @@ MAX_ROUNDS = 10
 loop:
   round += 1
 
+  Use the latest References / Novelty evidence bundle for `References / Positioning` scoring.
+  Re-run the References / Novelty Review Gate only if there is no prior bundle for this paper, the claims / positioning / related work changed materially, or the user explicitly asks for a fresh search.
+  Otherwise, reuse the latest saved bundle and mark the evidence basis as `reused literature-novelty evidence`.
+
   Dispatch 4 Review Agents in parallel:
-    - Historical Reviewer 1 (draft + memory/session.yaml + last_round_summary)
-    - Historical Reviewer 2 (draft + memory/session.yaml + last_round_summary)
-    - Fresh Reviewer 1     (draft only)
-    - Fresh Reviewer 2     (draft only)
+    - Historical Reviewer 1 (draft + memory/session.yaml + last_round_summary + literature/novelty evidence bundle)
+    - Historical Reviewer 2 (draft + memory/session.yaml + last_round_summary + literature/novelty evidence bundle)
+    - Technical Fresh Reviewer (draft + memory/session.yaml non-history metadata + literature/novelty evidence bundle)
+    - Non-Technical Fresh Reviewer (draft + memory/session.yaml non-history metadata + literature/novelty evidence bundle; evaluate as a busy, technically adjacent reviewer who may not follow all technical details but must understand the paper's story, contribution, and why the method is credible)
 
   Aggregate reports:
     - Persist all 4 raw reviewer reports to `.paper-review/audit/reviews/round-XX/`
@@ -296,12 +300,13 @@ Before proceeding, verify the input format:
 3. Write or refresh `.paper-review/memory/session.yaml` with venue, focus, quality target, and the derived `review_profile`
 4. If prior state exists, reload `.paper-review/memory/review/current_state.yaml`, `.paper-review/memory/review/last_round_summary.md`, and `.paper-review/memory/review/issues.yaml` before deciding whether to start a new baseline round
 5. If the persisted state indicates baseline review or later phases are already complete, continue from the recorded next expected phase instead of re-running baseline review
-6. Dispatch **4 Review Agents in parallel** for a full baseline assessment. At baseline, all 4 behave as Fresh Reviewers because there is no prior round summary yet.
-7. Persist all 4 raw baseline reports under `.paper-review/audit/reviews/round-00-baseline/`
-8. Aggregate into a single baseline `last_round_summary`
-9. Write the baseline aggregated summary to `.paper-review/audit/reviews/round-00-baseline/aggregated-summary.md`
-10. Update `.paper-review/memory/review/last_round_summary.md`, `.paper-review/memory/review/issues.yaml`, and `.paper-review/memory/review/current_state.yaml`
-11. Present the aggregated baseline review to the user
+6. Run the References / Novelty Review Gate unless the user explicitly requested a no-search review.
+7. Dispatch **4 Review Agents in parallel** for a full baseline assessment. At baseline, none receive a prior round summary; use three technically oriented fresh reviewers and one Non-Technical Fresh Reviewer focused on readability, storyline, contribution clarity, and first-impression credibility.
+8. Persist all 4 raw baseline reports under `.paper-review/audit/reviews/round-00-baseline/`
+9. Aggregate into a single baseline `last_round_summary`
+10. Write the baseline aggregated summary to `.paper-review/audit/reviews/round-00-baseline/aggregated-summary.md`
+11. Update `.paper-review/memory/review/last_round_summary.md`, `.paper-review/memory/review/issues.yaml`, and `.paper-review/memory/review/current_state.yaml`
+12. Present the aggregated baseline review to the user
 
 ### Phase 2: Revision Planning
 1. Categorize issues from the review by severity: CRITICAL > MAJOR > MINOR
@@ -355,11 +360,27 @@ Read `references/review-criteria.md` for full criteria and report template. Key 
 - **Check layout only as a gate note during iterative review**: serious layout blockers should be flagged, but layout is not a core scored dimension during the main loop
 - **Never rubber-stamp**: always identify at least 3 items to improve
 
+### References / Novelty Review Gate
+
+For full review rounds where `References / Positioning` is scored, the Planner must ensure a literature/novelty evidence bundle is available. Run the gate at baseline, when no prior bundle exists, when claims / positioning / related work changed materially, or when the user explicitly asks for a fresh search. For ordinary revision rounds that only polish writing, layout, or minor exposition, reuse the latest bundle and mark the evidence basis as `reused literature-novelty evidence`.
+
+1. Use the `research-lit` skill to search for related papers and organize the closest prior work by theme.
+2. Use the `novelty-check` skill to test whether the claimed contribution is already present in recent or closest literature.
+3. Save the bundle under `.paper-review/audit/reviews/round-XX/literature-novelty-evidence.md` and summarize it in the aggregated review.
+4. Reviewers must base the `References / Positioning` score on both the draft and this evidence bundle, not only on the draft bibliography.
+5. If fresh search is impossible, mark the evidence basis as `no fresh literature search`; in that case, `References / Positioning` should usually be capped at 3 unless the user explicitly requested an internal-only review.
+
+The evidence bundle must include:
+- search queries or paper-discovery routes used
+- closest-prior table with citation, core result/method, formal overlap, substantive overlap, and remaining distinction
+- novelty-check verdict (`clear`, `partial`, `weak`, or `unclear`)
+- missing citations and positioning fixes
+
 Scoring dimensions: Story / Logic, Theory / Rigor, Evidence, Writing / Structure, References / Positioning. Each 1-5.
 
 **Pass condition**: for each of the 4 reviewers individually, both must hold: (1) median score across the 5 core dimensions >= 4, and (2) no core dimension scored below 3. All 4 reviewers must pass this bar before final layout sign-off.
 
-### Two Reviewer Types
+### Reviewer Types
 
 **Historical Reviewer** (2 instances per round):
 - Receives the current draft, `memory/session.yaml`, and the **aggregated summary report from the previous round only** (not full history of all rounds)
@@ -367,13 +388,26 @@ Scoring dimensions: Story / Logic, Theory / Rigor, Evidence, Writing / Structure
 - Must explicitly list any unresolved issues from the previous round in the `Unresolved from last round` section of the report template
 - Must not read raw reviewer reports from older rounds unless the Planner explicitly overrides this for debugging
 
-**Fresh Reviewer** (2 instances per round):
+**Technical Fresh Reviewer** (1 instance per round):
 - Receives the current draft plus `memory/session.yaml` metadata needed for the active `review_profile`, but no prior review context
 - Focus: unbiased detection of new or overlooked issues
 - Provides an independent perspective uncorrupted by anchoring to previous feedback
 - Must not read `.paper-review/memory/review/*` or `.paper-review/audit/reviews/*`
 - In PDF-only review mode, may still score the 5 core dimensions, but must explicitly mark any theory/evidence judgment that cannot be checked from the available artifact as `limited evidence`
 - In PDF-only review mode, any overall pass/fail judgment is advisory only and must not be treated as equivalent to a full-source review pass
+
+**Non-Technical Fresh Reviewer** (1 instance per round):
+- Receives the same non-history inputs as the Technical Fresh Reviewer, but reviews as a busy, technically adjacent program-committee reviewer who may not fully follow the proof, derivation, or implementation details.
+- Primary focus: Abstract, Introduction, contribution list, overview figure, section flow, visual first impression, and whether the paper's value is legible without deep technical parsing.
+- The main score signal should be reflected in `Story / Logic`: can a non-specialist reviewer understand the problem, why it matters, what the gap is, what the key idea is, why the technique seems strong, and what evidence supports the claims?
+- May still fill the other four core dimensions, but should mark technical judgments as surface-level or limited when they depend on details the reviewer did not deeply verify.
+- The report should preserve both modes: write qualitative, reader-impression comments first, then translate that impression into the required 1-5 core-dimension scores. The score should be a compact summary of the felt clarity, trust, and friction described in the comments, not a replacement for them.
+- Comments should read like a human reader-impression report, not a binary checklist: describe where the Abstract, Introduction, contribution list, and main-body reading path feel clear, confusing, concrete, vague, persuasive, or over-sold.
+- While reading, note concepts, acronyms, notation, method names, assumptions, metrics, or prior-work references that create friction or make the reviewer feel they are missing context.
+- When claims such as "novel framework", "effective", "robust", "general", "principled", "comprehensive", or "significant improvement" feel slogan-like, explain what makes them feel unsupported and what kind of concrete mechanism, condition, number, theorem, experiment, or implementation detail would make them feel real.
+- Comments are most useful when they surface storyline breaks, vague or generic contributions, missing intuition, overclaiming, confusing section order, unclear figures/captions, and layout issues that reduce trust.
+- Must not read `.paper-review/memory/review/*` or `.paper-review/audit/reviews/*`.
+- In PDF-only review mode, the same advisory-only and `limited evidence` rules apply.
 
 ## Theory Agent Protocol
 
@@ -408,13 +442,19 @@ When designing or improving experiments:
 ## Writing Agent Protocol
 
 When drafting or revising prose:
-- **Compression**: target the section length guidelines in review-criteria.md
-- **Precision**: replace vague claims with quantified statements
+- **Compression**: target the section length guidelines in review-criteria.md without removing the logic that helps the reader feel oriented.
+- **Precision**: when a claim feels vague, revise toward concrete mechanism, condition, evidence, number, or limitation.
 - **Honesty**: report limitations and cases where the method is not the best
-- **Transitions**: every section should connect to the next
-- **Abstract**: must be self-contained (problem, gap, method, key quantitative result)
-- **Contributions list**: each item must have a supporting theorem/experiment/section reference
-- **Positioning**: introduction, related work, and discussion must clearly state the closest prior work/results, what is formally different, why that difference matters, and what limitations remain relative to prior work
+- **Transitions**: make section-to-section movement feel natural rather than abrupt.
+- **Abstract**: leave the reader with a concrete sense of the problem, gap, method idea, and key result.
+- **Contributions list**: make each item feel like a real technical contribution, not a broad promise.
+- **Positioning**: make the closest-prior boundary feel honest, specific, and easy to understand.
+- **Reader impression revision**: treat Non-Technical Fresh Reviewer comments as signals about reader experience, not binary defects.
+- **Storyline smoothing**: shape the Abstract, Introduction, section openings, and conclusion so the reader feels naturally carried from problem to gap, from gap to key idea, and from key idea to mechanism and evidence.
+- **Concept onboarding**: introduce concepts, acronyms, notation, assumptions, metrics, and prior-work names at the moment where they help the reader, before they become a source of friction.
+- **Slogan-to-substance rewrite**: when prose feels like it is selling, revise toward the mechanism, evidence, condition, limitation, or design choice that makes the claim feel real.
+- **Layout-facing prose**: write contribution bullets, captions, section openings, and overview-figure text so the page itself helps a skim reader follow the story.
+- **Human taste pass**: after revising front matter, reread it as a tired but fair reviewer and revise anything that feels inflated, vague, rushed, or hard to trust.
 
 ## Layout Agent Protocol
 

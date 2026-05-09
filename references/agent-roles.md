@@ -34,8 +34,8 @@
    +---------------------------+               |  Layout   |
    | Historical Reviewer 1     | <-----------> |  Agent    |
    | Historical Reviewer 2     |               +-----------+
-   | Fresh Reviewer 1          |
-   | Fresh Reviewer 2          |
+   | Technical Fresh Reviewer  |
+   | Non-Technical Fresh Rev.  |
    +---------------------------+
    aggregated summary report feeds back
    into Historical Reviewers next round
@@ -83,7 +83,7 @@ Core loop: Plan -> Write/Derive/Experiment -> Review (x4 parallel) -> Aggregate 
 
 **Role**: Harsh, constructive academic reviewer. Produce structured review reports per `references/review-criteria.md`.
 
-**Invocation**: 4 instances dispatched in parallel after each major revision, and as the first step when revising an existing draft. 2 are Historical Reviewers; 2 are Fresh Reviewers.
+**Invocation**: 4 instances dispatched in parallel after each major revision, and as the first step when revising an existing draft. In iterative rounds, 2 are Historical Reviewers, 1 is a Technical Fresh Reviewer, and 1 is a Non-Technical Fresh Reviewer. At baseline for an existing draft, no reviewer receives prior-round history; use three technically oriented fresh reviewers and one Non-Technical Fresh Reviewer.
 
 **Shared Behavior** (all 4 reviewers):
 - Read the full LaTeX source (and compiled PDF if available)
@@ -109,7 +109,7 @@ Core loop: Plan -> Write/Derive/Experiment -> Review (x4 parallel) -> Aggregate 
 - Do not re-flag issues that are cleanly resolved; acknowledge them in the `Resolved` list
 - Do not read raw reports from earlier rounds by default; rely on the prior aggregated summary only
 
-### Fresh Reviewer (2 per round)
+### Technical Fresh Reviewer (1 per round)
 
 **Additional context**: Receives the current draft, the review rubric, and non-review-history metadata from `.paper-review/memory/session.yaml` needed to apply the active `review_profile`. Has no access to prior review reports, `.paper-review/memory/review/*`, or audit artifacts.
 
@@ -118,6 +118,22 @@ Core loop: Plan -> Write/Derive/Experiment -> Review (x4 parallel) -> Aggregate 
 - Focus on issues that may have been overlooked or introduced in recent revisions
 - Leave the `Unresolved from last round` section blank (N/A)
 - In PDF-only review mode, label any theory/evidence conclusion that cannot be checked from the available artifact as `limited evidence`
+- In PDF-only review mode, treat any overall pass/fail as advisory only
+
+### Non-Technical Fresh Reviewer (1 per round)
+
+**Additional context**: Receives the same non-history inputs as the Technical Fresh Reviewer, but reviews as a busy, technically adjacent reviewer who may not understand every theorem, derivation, implementation detail, or domain-specific trick.
+
+**Additional responsibilities**:
+- Judge whether the paper is understandable and credible from the front door: title, abstract, introduction, contribution list, overview figure, section flow, figure/table captions, and visual first impression
+- Put the strongest scoring signal in `Story / Logic`: can the reviewer understand the problem, stakes, prior-work gap, key idea, technical strength, evidence preview, and contribution boundaries without deep technical parsing?
+- Still fill all 5 core-dimension scores, but label technical judgments as surface-level or `limited evidence` when they depend on details the reviewer did not deeply verify
+- Preserve compatibility between subjective comments and structured scoring: first describe the reader impression, then assign the required scores as a compressed judgment of the clarity, trust, friction, and persuasiveness described in those comments
+- Write comments as a subjective reader-impression report, not a pass/fail checklist: describe where the Abstract, Introduction, contribution list, and main-body reading path feel smooth, confusing, concrete, vague, trustworthy, or over-sold
+- Note comprehension friction from concepts, acronyms, notation, method names, assumptions, metrics, or prior-work references that appear before the paper has made them feel understandable
+- Distinguish concrete technical description from slogan-like writing by explaining which claims feel inflated or generic, and what kind of mechanism, condition, number, theorem, experiment, or implementation detail would make them more convincing
+- Emphasize storyline breaks, generic contribution bullets, missing intuition, unclear novelty framing, overclaiming, confusing section order, weak figure/caption communication, and layout problems that reduce trust
+- Leave the `Unresolved from last round` section blank (N/A)
 - In PDF-only review mode, treat any overall pass/fail as advisory only
 
 ## Theory Agent
@@ -163,13 +179,19 @@ Experiment Agent
 - Ensure consistent terminology and notation references
 - Adapt citation style to target venue
 - Rewrite sections based on review feedback
+- Translate Non-Technical Fresh Reviewer impressions into prose revisions that improve the reader's felt clarity and trust
+- When a claim feels vague or slogan-like, revise toward concrete mechanism, condition, number, theorem, experiment, implementation detail, or limitation
+- Add concept onboarding where the reader may feel lost, introducing terms, acronyms, notation, metrics, assumptions, and prior-work context at the point where they become useful
 
 **Quality targets**:
 - Every paragraph has a clear purpose
 - No redundant sentences
-- Claims precise and quantified
-- Transitions between sections explicit
-- Abstract self-contained
+- Claims feel concrete and grounded rather than inflated
+- Transitions between sections feel natural
+- Abstract gives a concrete sense of the problem, gap, idea, and result
+- The story feels smoothly guided from problem -> gap -> key idea -> technical mechanism -> evidence -> contribution
+- A skim reader can recover the paper's value from the Abstract, Introduction, contribution bullets, section openings, overview figure text, and captions
+- Front matter passes a tired-but-fair reviewer read: concrete, guided, credible, and not over-sold
 
 ## Layout Agent
 
@@ -197,8 +219,9 @@ last_round_summary = rehydrated_last_round_summary or None
 round = rehydrated_round or 0
 
 Planner -> [Agent(s)] ->
-  parallel: [Historical R1(draft+prev) | Historical R2(draft+prev) |
-             Fresh R1(draft)           | Fresh R2(draft)           ]
+  Planner (run References / Novelty Review Gate and save evidence bundle)
+  -> parallel: [Historical R1(draft+prev+evidence) | Historical R2(draft+prev+evidence) |
+                Technical Fresh(draft+profile+evidence) | Non-Technical Fresh(draft+profile+evidence)]
   -> Planner (persist raw reports to audit, aggregate all 4 reports, merge issues, prioritize unresolved)
   -> Planner (write aggregated summary to audit and update memory/last_round_summary + issues ledger)
   -> [Agent(s) revise]
