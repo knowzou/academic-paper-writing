@@ -420,6 +420,8 @@ Mode B assumes the draft is full or near-full enough to review as a paper. If th
 Use the Global Source Validation result. If only a PDF is available and the user chooses advisory review, run the explicit advisory PDF-only branch and stop with source-required next steps. If source is available, proceed normally.
 
 ### Phase 1: Baseline Review
+For full-source submit-ready Mode B, the Mandatory Full-Source Submit-Ready Pipeline overrides the default baseline-first flow. Run Related-Paper Calibration, Paper Maturity Audit, and one Initial Maturity Revision before any 4-reviewer baseline or iterative review pass. The first 4-reviewer pass after this initial revision becomes the baseline for the Review-Revise Loop.
+
 1. Read the existing .tex source (and compiled PDF if available)
 2. Initialize or rehydrate `.paper-review/` state for this paper
 3. Write or refresh `.paper-review/memory/session.yaml` with venue, focus, quality target, and the derived `review_profile`
