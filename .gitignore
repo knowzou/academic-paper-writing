@@ -1,1 +1,5 @@
 .DS_Store
+*.zip
+paper-skill-orchestration-flow.png
+review-agent-system-flow.png
+writing-agent-loop-flow.png
