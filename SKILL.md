@@ -14,14 +14,33 @@ description: >
 
 Multi-agent system for writing new and revising existing academic papers. Uses a Review-Revise loop with specialized agents for theory, experiments, writing, and layout.
 
+## Workflow Preview First
+
+Before Phase 0 Q&A, source-choice questions, or agent dispatch, the Planner must briefly show the user the intended path and then proceed. Keep this preview concise, but make the process visible:
+- **Chosen mode and reason**: Mode A seed/full-paper writing, Mode B full-draft revision, or Mode C narrow task.
+- **Quality target**: submit-ready, draft feedback, or quick skeleton; state what this means for review depth.
+- **Next steps**: list the immediate 3-6 steps, including whether the workflow will run baseline review, related-paper calibration, paper-maturity expansion, specialist revisions, Review-Revise Loop, literature/novelty evidence, and final layout gate.
+- **Automation policy**: state whether the Planner will continue automatically after review, or pause for user choices.
+- **Stop conditions**: pass condition, round limit, quick-skeleton stop, review-only stop, PDF-only advisory stop, or explicit user stop.
+- **Input/source status**: if only a PDF is available, say that precise source edits and true submit-ready sign-off require `.tex` / bibliography source; the PDF-only path is advisory.
+
+Example preview for the common submit-ready revision case:
+```text
+Workflow preview:
+- Mode B: full/near-full draft revision.
+- Target: submit-ready.
+- Steps: baseline review -> related-paper calibration -> maturity expansion/revision -> 4-reviewer loop -> final layout gate.
+- I will continue after baseline review automatically unless you stop or limit scope.
+```
+
 ## Entry Point: Phase 0 — Contextual Q&A
 
 Before dispatching any agents, gather critical context from the user. Ask these questions upfront (use AskUserQuestion where available):
 
 **Q1 — Starting point** (determines workflow mode):
-- I have research results / ideas, no draft yet → Mode A
-- I have an existing .tex / .pdf draft → Mode B
-- I need a specific isolated task (fix equations, convert format, etc.) → Mode C
+- I have research results / ideas / notes, or only a very short seed draft → Mode A
+- I have a full or near-full `.tex` / `.pdf` paper draft → Mode B
+- I need a specific isolated task (fix equations, convert format, one-pass review, etc.) → Mode C
 
 **Q2 — Target venue** (determines page budget, style, rigor bar):
 - ML conference (NeurIPS / ICML / ICLR) — 9 pages, theory + experiments
@@ -40,7 +59,7 @@ Before dispatching any agents, gather critical context from the user. Ask these 
 - Draft for feedback: 1-2 review rounds, report issues to user
 - Quick skeleton: structure only, minimal content generation
 
-If Q1 answer is **Mode B or C**, also ask:
+If Q1 answer is **Mode B**, also ask:
 
 **Q5 — Main weakness** (multi-select, Mode B only):
 - Theory is weak or incomplete
@@ -48,7 +67,9 @@ If Q1 answer is **Mode B or C**, also ask:
 - Writing is verbose or unclear
 - Everything — run a full harsh review first
 
-**Q6 — Closest prior results / papers** (always ask unless already explicit):
+For **Mode C**, ask only the context needed for the narrow task, plus Q6 if the task affects claims, novelty, related work, or positioning.
+
+**Q6 — Closest prior results / papers** (always ask for Mode A and Mode B unless already explicit):
 - What are the closest prior papers or theoretical results?
 - Which theorem / method / setting / experimental claim is closest to yours?
 - What is formally different?
@@ -94,7 +115,19 @@ Profile rules:
 - `IEEE / Springer journal`: strengthen completeness, literature coverage, and mature discussion of limitations.
 - `Workshop / arXiv`: allow exploratory evidence, but require explicit calibration of claims and limitations.
 
-If user skips Q&A or input is unambiguous (e.g., .tex file attached + "revise"), auto-infer mode and skip relevant questions. Always ask Q2 and Q4 if not clear.
+If user skips Q&A or input is unambiguous (e.g., .tex file attached + "revise"), the Planner may auto-infer the workflow mode, but must not silently skip the core review context:
+- Always ask or infer **Q2 target venue** and **Q4 quality target** before any review or revision loop. If the user refuses or asks to proceed immediately, record `unknown` or `user_skipped` in `session.yaml`.
+- Always ask **Q6 closest prior results / papers** for Mode A and Mode B unless already explicit. For Mode C, ask Q6 only when the task affects claims, novelty, related work, or positioning. If the user does not provide it when needed, record `closest_prior_results: unknown` and lower the confidence of `References / Positioning` judgments rather than pretending the prior-work boundary is known.
+- Q3 focus and Q5 weakness may be inferred from the request when clear, but inferred values must be written to `session.yaml` so later agents do not rely on unstated assumptions.
+
+### Global Source Validation
+
+Before choosing Mode A or Mode B for any existing draft, check whether editable source is available.
+
+- **If `.tex` and bibliography/source assets are available**: proceed normally.
+- **If only PDF is available**: show the PDF-only limitation in the Workflow Preview and ask whether to run an advisory PDF-only review or wait for source. Do not imply that the paper can be precisely revised or signed off as submit-ready without source.
+- **If the user chooses advisory PDF-only review**: extract text and inspect the PDF, optionally run literature/novelty evidence and related-paper calibration with limited confidence, run an advisory baseline review, then stop with source-required next steps. Mark layout as `Limited / N/A`, mark source-dependent theory/evidence judgments as `limited evidence`, and do not enter the full source-editing Review-Revise Loop.
+- **If the user provides source later**: rehydrate any advisory findings as context, then run the normal Mode A or Mode B workflow from source.
 
 ## Runtime Local State and Audit Protocol
 
@@ -115,6 +148,7 @@ When this skill is used on a real paper workspace, maintain a local runtime stat
       round-01/
       round-02/
       ...
+    calibration/
     revision-log.md
     decision-log.md
 ```
@@ -128,6 +162,7 @@ Rules:
 - Historical Reviewers may read `memory/session.yaml` and `memory/review/last_round_summary.md` only.
 - Fresh Reviewers must not read prior review memory or audit files.
 - Fresh Reviewers may read `memory/session.yaml` only for non-review-history metadata such as venue, focus, quality target, and `review_profile`.
+- Fresh Reviewers may receive the current round's literature/novelty evidence content from the Planner as a round-local non-history input. They must not browse `.paper-review/audit/reviews/*` to retrieve it themselves.
 - Specialist agents may read `memory/review/issues.yaml` and `memory/review/revision_plan.yaml` when performing revisions.
 - `memory/review/last_round_summary.md` must contain only the previous round's aggregated review state, not the full review archive.
 - On every new invocation of the skill, the Planner must first check whether `.paper-review/memory/` already exists for the current paper and rehydrate state from disk before creating any new rounds.
@@ -139,6 +174,7 @@ Minimum contents:
 - `review/issues.yaml`: stable issue ledger with issue IDs, severity, status, first seen round, last seen round, and owner
 - `review/revision_plan.yaml`: current actionable fix list for specialist agents
 - `review/current_state.yaml`: lightweight execution state with at least `workflow_mode`, `phase`, `round`, `round_type`, `latest_summary_path`, and `loop_status`
+- `calibration/paper_maturity_profile.yaml`: compact guidance from 2-3 closest mature papers when the workflow is writing or substantially revising toward submit-ready quality
 
 Resume semantics:
 - `current_state.yaml` must record the last completed phase and the next expected phase.
@@ -173,12 +209,92 @@ Round-type rules:
 ## Mode Dispatch
 
 After Phase 0:
-1. **Mode A** (no draft) → Write from Scratch workflow below
-2. **Mode B** (existing draft) → Revise Existing Paper workflow below
-3. **Mode C** (specific task) → Dispatch directly to the relevant agent; run a single Fresh Reviewer pass afterward to check for regressions; ask user if they want a full review.
+1. **Mode A — Write from Scratch or Seed Draft** → Use when there is no reviewable full paper yet: idea notes, method/results notes, a very short draft, a partial introduction, or a skeletal draft missing major paper sections. Treat the provided material as seed input and build it into a complete paper before review.
+2. **Mode B — Revise Full or Near-Full Draft** → Use when an existing `.tex` / `.pdf` draft is complete enough to review as a paper, even if weak. Default goal is to revise, strengthen, and polish it toward submit-ready quality.
+3. **Mode C — Narrow Isolated Task** → Use only when the user explicitly asks for a local task such as fixing one equation, rewriting one paragraph, converting format, making a skeleton from an existing draft, or doing a one-pass review. Dispatch directly to the relevant agent; run a single selected Fresh Reviewer pass afterward to check for regressions when the task changes paper content; ask user if they want a full review.
+   - Choose the Mode C reviewer by task: technical/proof/experiment/equation edits use a Technical Fresh Reviewer; intro/story/writing/layout edits use a Non-Technical Fresh Reviewer; one-pass review runs the single most relevant reviewer and then stops.
+   - If the user asks for a quick skeleton of an existing draft, treat it as a Mode C structural outline task and stop after the skeleton unless the user explicitly asks to continue into writing/revision.
    - If user requests full review after Mode C: first persist the raw Fresh Reviewer report under `.paper-review/audit/reviews/round-00-mode-c/`, then normalize the Mode C review into an **aggregated summary artifact**, assign stable issue IDs, write it to `.paper-review/audit/reviews/round-00-mode-c/aggregated-summary.md`, update `.paper-review/memory/review/last_round_summary.md`, `.paper-review/memory/review/issues.yaml`, and `.paper-review/memory/review/current_state.yaml`, and only then enter the standard 4-reviewer loop starting at round 1.
 
-## Mode A: Write from Scratch
+### Draft Completeness Triage
+
+If the user provides a draft, the Planner must first decide whether it is seed material or a reviewable paper draft:
+- Route to **Mode A** when the draft is an idea sketch, short note, partial intro, rough result log, or otherwise missing major sections such as related work, method, evidence/experiments, or conclusion.
+- Route to **Mode B** when the draft has the major paper sections and a visible claim-evidence structure, even if the story, theory, experiments, or writing are weak.
+- When uncertain, prefer **Mode A** if the work mainly requires completing the paper, and **Mode B** if the work mainly requires revising an already reviewable paper.
+
+### Default Submit-Ready Revision Policy
+
+Unless the user explicitly asks for review-only, quick skeleton, draft feedback, or a narrow isolated edit, interpret requests such as "revise", "improve", "polish", "fix this paper", "strengthen the paper", or "make it submit-ready" as `quality_target = Submit-ready`.
+
+For submit-ready Mode B work:
+- Do not stop after baseline review merely to ask which issues to address.
+- Address all CRITICAL and MAJOR issues automatically, including protected Non-Technical Fresh Reviewer reader-impression issues affecting `Story / Logic` or `Writing / Structure`.
+- Continue into the Review-Revise Loop until the pass condition, round limit, or an explicit user stop.
+
+### Submit-Ready Continuation Rule
+
+For any submit-ready workflow, the Planner should keep moving through review, expansion/revision, verification, and layout sign-off. Do not stop just because one review pass finished, one revision pass was applied, files were edited, or LaTeX compiled successfully.
+
+Only pause for user input when the next action would change the core claim or method scope, require new experiments/resources the user has not provided, choose between incompatible paper directions, exceed the round limit, hit a real source/data blocker, or respond to an explicit user stop.
+
+Before each stop, state the current phase, the reason stopping is necessary, and the next concrete action after the user responds.
+
+Skip the full Review-Revise Loop only when:
+- `quality_target == Quick skeleton`
+- the user explicitly asks for review-only / one-pass feedback
+- the user explicitly scopes the request to a narrow isolated edit
+- only a PDF is available and the user chooses advisory PDF-only review
+
+### Mandatory Full-Source Submit-Ready Pipeline
+
+If `quality_target == Submit-ready` and editable source files are available, the Planner must execute this path in order:
+
+1. Show Workflow Preview.
+2. Run Global Source Validation.
+3. Run Related-Paper Calibration using 2-3 closest mature papers.
+4. Run Paper Maturity Audit against the calibration profile.
+5. Execute an Initial Maturity Revision before the professional review loop:
+   - expand thin sections
+   - strengthen intro/story
+   - add or improve related-work positioning
+   - add missing citations
+   - deepen method/theory/evidence explanation
+   - improve figures/tables/captions/layout-facing prose where needed
+   - preserve readability and story/logical flow so a technically adjacent or non-specialist reader can understand what the paper does, why it matters, what is technically strong, and how the evidence supports the claims
+6. Enter the standard 4-reviewer Review-Revise Loop.
+7. Continue review -> revise -> review until pass condition, round limit, explicit stop, or real blocker.
+8. Run final Technical Layout Gate and PDF Aesthetic Layout Gate.
+
+Do not skip calibration, maturity audit, initial maturity revision, or the Review-Revise Loop merely because the draft looks reasonable, compiles, or has already received one round of edits.
+
+### Related-Paper Calibration and Paper Maturity
+
+Before writing a new paper or making major submit-ready revisions, calibrate against 2-3 closest mature papers in the same area or venue style. This is not a full survey; it is a practical writing calibration pass to make the draft feel like a real paper rather than expanded notes.
+
+Use the closest papers to form a compact `paper_maturity_profile`:
+
+```yaml
+paper_maturity_profile:
+  anchor_papers:
+    - paper:
+      why_relevant:
+      useful_pattern:
+  expected_shape:
+    story:
+    section_depth:
+    evidence:
+    references:
+    layout_density:
+  gaps_to_fix:
+    - ...
+```
+
+The profile should guide the Planner, Writing Agent, Experiment Agent, Theory Agent, and Layout Agent. It should cover story structure, section organization, expected depth, citation/related-work density, evidence or theorem support, figure/table use, and visual density. If network or literature search is unavailable, use the user's closest-prior answers and mark calibration confidence as limited.
+
+For submit-ready work, treat draft-like maturity as a fix target before final prose polish. Typical maturity gaps include an overly short or generic introduction, thin related work, method sections that only sketch an idea, missing experiment setup/baseline/ablation/analysis, underdeveloped theorem assumptions or proof discussion, placeholder-like figures/tables, shallow limitations, and pages that look sparse or unbalanced versus the anchor papers.
+
+## Mode A: Write from Scratch or Seed Draft
 
 ### Phase 0.5: Runtime State Setup
 Before planning:
@@ -192,12 +308,20 @@ Before planning:
 ### Phase 1: Planning
 Use the Planner Agent role (see `references/agent-roles.md`).
 
-1. Read user's input: problem description, method, results, target venue
+1. Read user's input: problem description, method, results, target venue, and any seed draft / notes
 2. Produce a paper outline:
    - Title, abstract sketch, section structure
    - Identify which sections need theory derivation vs. experiment design vs. prose
    - Identify what can be done in parallel
 3. Create a TodoWrite plan tracking each section
+
+If `quality_target == Quick skeleton`, stop after Phase 1. Output the title candidates, abstract sketch, contribution sketch, section outline, evidence/theory TODOs, and next-step plan. Do not run parallel content generation, review-revise loop, literature/novelty gate, or final layout gate unless the user explicitly asks to continue.
+
+### Phase 1.5: Related-Paper Calibration and Maturity Profile
+
+For submit-ready or full-draft targets, run the Related-Paper Calibration before drafting substantial prose. Select 2-3 closest mature papers from Q6, the bibliography, or a quick literature search. Read them at whole-paper level for writing and presentation patterns, not only for novelty.
+
+Save `paper_maturity_profile` under `.paper-review/audit/calibration/paper_maturity_profile.yaml` and mirror the latest copy under `.paper-review/memory/calibration/paper_maturity_profile.yaml`. Use it to decide whether the paper needs expansion tasks before polish tasks.
 
 ### Phase 2: Parallel Content Generation
 Dispatch agents in parallel where possible:
@@ -205,6 +329,8 @@ Dispatch agents in parallel where possible:
 - **Theory Agent** (Task subagent): Derive all mathematical content — model, algorithm, theorems, proofs, bounds. Output LaTeX-ready blocks.
 - **Experiment Agent** (Task subagent, may spawn parallel sub-agents per scenario): Design benchmarks, write experiment scripts, generate figures and tables. Output scripts + LaTeX figure/table code.
 - **Writing Agent**: Draft related work, introduction framing, conclusion. Can begin once outline is set.
+
+Use `paper_maturity_profile` to avoid producing a thin draft: expand underdeveloped sections with motivation, mechanism, evidence, theorem/proof context, related-work positioning, and analysis before doing compression or style polish.
 
 Merge results into a single .tex file.
 
@@ -234,6 +360,7 @@ loop:
   Use the latest References / Novelty evidence bundle for `References / Positioning` scoring.
   Re-run the References / Novelty Review Gate only if there is no prior bundle for this paper, the claims / positioning / related work changed materially, or the user explicitly asks for a fresh search.
   Otherwise, reuse the latest saved bundle and mark the evidence basis as `reused literature-novelty evidence`.
+  The Planner passes the evidence content directly to reviewers as round-local non-history input; Fresh Reviewers must not read `.paper-review/audit/reviews/*` themselves.
 
   Dispatch 4 Review Agents in parallel:
     - Historical Reviewer 1 (draft + memory/session.yaml + last_round_summary + literature/novelty evidence bundle)
@@ -254,7 +381,8 @@ loop:
 
   Planner checks pass condition:
     PASS if: for each of the 4 reviewers, median across the 5 core dimensions >= 4 AND no core dimension below 3
-    if PASS: break
+    For submit-ready work, also require no unresolved paper-maturity gaps that make the draft still feel skeletal, thin, citation-light, or visually unfinished.
+    if PASS and maturity is acceptable: break
 
   if quality_target == "Draft for feedback" and round >= 2:
     Present aggregated issues to user; break (do not require pass condition)
@@ -262,13 +390,14 @@ loop:
   if round >= MAX_ROUNDS:
     Present current state to user: scores per reviewer, top unresolved issues
     Warn if any reviewer has median < 4 or any core dimension below 3
-    Ask: "10 rounds completed without full convergence. Continue (10 more rounds) or accept current draft?"
+    Ask: "10 rounds completed without full convergence. Continue 10 more rounds, or stop and report the current draft as not yet submit-ready?"
     if continue: MAX_ROUNDS += 10  (do not reset round counter; preserve last_round_summary)
     else: break
 
-  Planner creates revision task list from aggregated issues
+  Planner creates revision task list from aggregated issues and paper-maturity gaps
   Planner writes the current fix plan to `.paper-review/memory/review/revision_plan.yaml`
   Planner logs major accept/reject decisions to `.paper-review/audit/decision-log.md`
+  For submit-ready work, expansion and evidence-building tasks come before final polish when sections are visibly underdeveloped.
   Dispatch fixes to appropriate agent(s)
   Merge revisions
   Append completed fixes to `.paper-review/audit/revision-log.md`
@@ -277,22 +406,18 @@ loop:
 
 ### Phase 4: Final Layout Gate
 - Layout Agent: compile, check warnings, fix overflow/formatting
-- Planner or final reviewer: verify the layout gate on the compiled PDF
-- Required checks: references resolve, equations fit, figures/tables readable, venue formatting respected
-- If the layout gate fails but content is intact, fix layout and re-run the gate
+- Planner or final reviewer: verify both the Technical Layout Gate and PDF Aesthetic Layout Gate on the compiled PDF
+- Technical checks: references resolve, equations fit, figures/tables readable, bibliography/style consistent, venue formatting respected
+- Aesthetic checks: section lengths feel balanced, pages are neither sparse nor crowded, formula/text density is readable, figures/tables/captions support skimming, and the final pages look like a mature submission rather than notes squeezed into a template
+- If either layout gate fails but content is intact, fix source/content/layout and re-run the gate
 - If the layout fixes introduce content regressions, return to Phase 3
 
 ## Mode B: Revise Existing Paper
 
-### Phase 0.5: Input Validation
-Before proceeding, verify the input format:
+Mode B assumes the draft is full or near-full enough to review as a paper. If the draft is skeletal or mainly seed material, route to Mode A instead.
 
-- **If .tex source available**: proceed normally.
-- **If PDF only (no .tex)**:
-  - Warn the user: "Only a PDF was provided. Revisions will be limited — I can extract text for review, but cannot make precise LaTeX edits without the source file."
-  - Ask: "Do you want to (a) proceed with text-extraction-based review only, or (b) provide the .tex source?"
-  - If (a): extract text via `pdftotext`, run review-only workflow (no Writing/Theory/Experiment agents), mark the final layout gate as `N/A`, treat theory/evidence findings that require source-level inspection as `limited evidence` rather than pretending full verification, and label any overall pass/fail as advisory only rather than equivalent to a full-source review.
-  - If (b): wait for .tex before proceeding.
+### Phase 0.5: Input Validation
+Use the Global Source Validation result. If only a PDF is available and the user chooses advisory review, run the explicit advisory PDF-only branch and stop with source-required next steps. If source is available, proceed normally.
 
 ### Phase 1: Baseline Review
 1. Read the existing .tex source (and compiled PDF if available)
@@ -301,20 +426,23 @@ Before proceeding, verify the input format:
 4. If prior state exists, reload `.paper-review/memory/review/current_state.yaml`, `.paper-review/memory/review/last_round_summary.md`, and `.paper-review/memory/review/issues.yaml` before deciding whether to start a new baseline round
 5. If the persisted state indicates baseline review or later phases are already complete, continue from the recorded next expected phase instead of re-running baseline review
 6. Run the References / Novelty Review Gate unless the user explicitly requested a no-search review.
-7. Dispatch **4 Review Agents in parallel** for a full baseline assessment. At baseline, none receive a prior round summary; use three technically oriented fresh reviewers and one Non-Technical Fresh Reviewer focused on readability, storyline, contribution clarity, and first-impression credibility.
-8. Persist all 4 raw baseline reports under `.paper-review/audit/reviews/round-00-baseline/`
-9. Aggregate into a single baseline `last_round_summary`
-10. Write the baseline aggregated summary to `.paper-review/audit/reviews/round-00-baseline/aggregated-summary.md`
-11. Update `.paper-review/memory/review/last_round_summary.md`, `.paper-review/memory/review/issues.yaml`, and `.paper-review/memory/review/current_state.yaml`
-12. Present the aggregated baseline review to the user
+7. Run Related-Paper Calibration using 2-3 closest mature papers and save `paper_maturity_profile`.
+8. Dispatch **4 Review Agents in parallel** for a full baseline assessment. At baseline, none receive a prior round summary; use three technically oriented fresh reviewers and one Non-Technical Fresh Reviewer focused on readability, storyline, contribution clarity, and first-impression credibility.
+9. Persist all 4 raw baseline reports under `.paper-review/audit/reviews/round-00-baseline/`
+10. Aggregate into a single baseline `last_round_summary`
+11. Write the baseline aggregated summary to `.paper-review/audit/reviews/round-00-baseline/aggregated-summary.md`
+12. Update `.paper-review/memory/review/last_round_summary.md`, `.paper-review/memory/review/issues.yaml`, and `.paper-review/memory/review/current_state.yaml`
+13. Present the aggregated baseline review to the user. If `quality_target == Submit-ready`, continue directly into revision planning and execution; pause here only for review-only, draft-feedback, user-limited scope, PDF-only advisory mode, or explicit user stop.
 
 ### Phase 2: Revision Planning
 1. Categorize issues from the review by severity: CRITICAL > MAJOR > MINOR
-2. Group by type: theory, experiments, writing, layout
-3. Ask user which issues to address (or address all if user says "fix everything")
-4. Create a prioritized revision plan via TodoWrite
-5. Write the active fix list to `.paper-review/memory/review/revision_plan.yaml`
-6. Log any user-approved deferrals or scope cuts to `.paper-review/audit/decision-log.md`
+2. Add maturity gaps from `paper_maturity_profile`, especially thin sections, weak citations, missing evidence/theorem support, shallow analysis, and visually unfinished pages
+3. Group by type: theory, experiments, writing, layout
+4. If `quality_target == Submit-ready`, address all CRITICAL and MAJOR issues automatically, including protected reader-impression issues and maturity gaps that make the draft feel non-submit-ready. Ask user which issues to address only for draft feedback, review-only, PDF-only advisory mode, or user-limited scope.
+5. Create a prioritized revision plan via TodoWrite
+6. Put expansion/evidence-building tasks before final polish when the draft is short, content-light, citation-light, or analysis-light
+7. Write the active fix list to `.paper-review/memory/review/revision_plan.yaml`
+8. Log any user-approved deferrals or scope cuts to `.paper-review/audit/decision-log.md`
 
 ### Phase 3: Execute Revisions
 Dispatch to specialist agents based on issue type:
@@ -335,7 +463,7 @@ Re-run the 4-reviewer parallel loop using the same structure as Mode A Phase 3.
 
 ```
 last_round_summary = aggregated summary from Mode B Phase 1 baseline review
-round = 0
+round = rehydrated_round or 0
 MAX_ROUNDS = 10
 
 (same loop body as Mode A Phase 3)
@@ -366,8 +494,8 @@ For full review rounds where `References / Positioning` is scored, the Planner m
 
 1. Use the `research-lit` skill to search for related papers and organize the closest prior work by theme.
 2. Use the `novelty-check` skill to test whether the claimed contribution is already present in recent or closest literature.
-3. Save the bundle under `.paper-review/audit/reviews/round-XX/literature-novelty-evidence.md` and summarize it in the aggregated review.
-4. Reviewers must base the `References / Positioning` score on both the draft and this evidence bundle, not only on the draft bibliography.
+3. Save the bundle under `.paper-review/audit/reviews/round-XX/literature-novelty-evidence.md` for audit, and pass its content directly to reviewers as round-local non-history input.
+4. Reviewers must base the `References / Positioning` score on both the draft and this evidence bundle, not only on the draft bibliography. Fresh Reviewers may use the Planner-provided evidence content, but must not browse audit history or prior review artifacts.
 5. If fresh search is impossible, mark the evidence basis as `no fresh literature search`; in that case, `References / Positioning` should usually be capped at 3 unless the user explicitly requested an internal-only review.
 
 The evidence bundle must include:
@@ -376,72 +504,39 @@ The evidence bundle must include:
 - novelty-check verdict (`clear`, `partial`, `weak`, or `unclear`)
 - missing citations and positioning fixes
 
+### Related-Paper Calibration Gate
+
+For Mode A and submit-ready Mode B, the Planner should use 2-3 closest mature papers as anchors before substantial writing or revision. This gate is about paper-writing maturity, not only novelty.
+
+Read the anchor papers at whole-paper level and summarize what the current paper should learn from them: how the introduction builds the problem/gap, how related work positions the contribution, how much method/theory detail is expected, how experiments or proofs are explained, how figures/tables support the story, how many references feel normal for the venue, and how dense or balanced the PDF pages look.
+
+The result is the `paper_maturity_profile`. Specialist agents should use this profile as taste guidance. Do not turn it into a rigid template; use it to decide whether the draft feels underwritten, under-cited, under-evidenced, or visually immature.
+
 Scoring dimensions: Story / Logic, Theory / Rigor, Evidence, Writing / Structure, References / Positioning. Each 1-5.
 
 **Pass condition**: for each of the 4 reviewers individually, both must hold: (1) median score across the 5 core dimensions >= 4, and (2) no core dimension scored below 3. All 4 reviewers must pass this bar before final layout sign-off.
 
 ### Reviewer Types
 
-**Historical Reviewer** (2 instances per round):
-- Receives the current draft, `memory/session.yaml`, and the **aggregated summary report from the previous round only** (not full history of all rounds)
-- Focus: verify that issues flagged in the previous round are genuinely resolved, not superficially patched
-- Must explicitly list any unresolved issues from the previous round in the `Unresolved from last round` section of the report template
-- Must not read raw reviewer reports from older rounds unless the Planner explicitly overrides this for debugging
-
-**Technical Fresh Reviewer** (1 instance per round):
-- Receives the current draft plus `memory/session.yaml` metadata needed for the active `review_profile`, but no prior review context
-- Focus: unbiased detection of new or overlooked issues
-- Provides an independent perspective uncorrupted by anchoring to previous feedback
-- Must not read `.paper-review/memory/review/*` or `.paper-review/audit/reviews/*`
-- In PDF-only review mode, may still score the 5 core dimensions, but must explicitly mark any theory/evidence judgment that cannot be checked from the available artifact as `limited evidence`
-- In PDF-only review mode, any overall pass/fail judgment is advisory only and must not be treated as equivalent to a full-source review pass
-
-**Non-Technical Fresh Reviewer** (1 instance per round):
-- Receives the same non-history inputs as the Technical Fresh Reviewer, but reviews as a busy, technically adjacent program-committee reviewer who may not fully follow the proof, derivation, or implementation details.
-- Primary focus: Abstract, Introduction, contribution list, overview figure, section flow, visual first impression, and whether the paper's value is legible without deep technical parsing.
-- The main score signal should be reflected in `Story / Logic`: can a non-specialist reviewer understand the problem, why it matters, what the gap is, what the key idea is, why the technique seems strong, and what evidence supports the claims?
-- May still fill the other four core dimensions, but should mark technical judgments as surface-level or limited when they depend on details the reviewer did not deeply verify.
-- The report should preserve both modes: write qualitative, reader-impression comments first, then translate that impression into the required 1-5 core-dimension scores. The score should be a compact summary of the felt clarity, trust, and friction described in the comments, not a replacement for them.
-- Comments should read like a human reader-impression report, not a binary checklist: describe where the Abstract, Introduction, contribution list, and main-body reading path feel clear, confusing, concrete, vague, persuasive, or over-sold.
-- While reading, note concepts, acronyms, notation, method names, assumptions, metrics, or prior-work references that create friction or make the reviewer feel they are missing context.
-- When claims such as "novel framework", "effective", "robust", "general", "principled", "comprehensive", or "significant improvement" feel slogan-like, explain what makes them feel unsupported and what kind of concrete mechanism, condition, number, theorem, experiment, or implementation detail would make them feel real.
-- Comments are most useful when they surface storyline breaks, vague or generic contributions, missing intuition, overclaiming, confusing section order, unclear figures/captions, and layout issues that reduce trust.
-- Must not read `.paper-review/memory/review/*` or `.paper-review/audit/reviews/*`.
-- In PDF-only review mode, the same advisory-only and `limited evidence` rules apply.
+Use the detailed reviewer definitions in `references/agent-roles.md` and scoring/comment guidance in `references/review-criteria.md`. The operational rule is:
+- Full rounds use 2 Historical Reviewers, 1 Technical Fresh Reviewer, and 1 Non-Technical Fresh Reviewer.
+- Historical Reviewers receive only the previous aggregated summary, not raw review history.
+- Fresh Reviewers receive no prior review memory or audit history, but may receive the current round's literature/novelty evidence directly from the Planner.
+- The Non-Technical Fresh Reviewer writes subjective reader-impression comments first and then translates that impression into the required 1-5 score table, with the strongest signal in `Story / Logic`.
 
 ## Theory Agent Protocol
 
-When strengthening theory:
-1. Read the full method section to understand the mathematical framework
-2. Identify opportunities: missing proofs, corollaries, bounds, convergence guarantees
-3. For each new result: state assumptions precisely, write a complete proof, add connecting text
-4. Verify notation consistency with the rest of the paper
-5. If the result is close to prior work, explicitly compare assumptions, guarantees, scope, proof technique, and remaining limitations versus the closest prior results
-6. Output: LaTeX theorem/proof environments ready for insertion, plus a short "difference from prior results" discussion when relevant
-
-Common theory improvements:
-- Add corollaries showing limiting behavior of key parameters
-- Prove convergence or monotonicity properties of iterative algorithms
-- Derive information-theoretic bounds (CRLB, mutual information) for benchmarking
-- Add lemmas that break long proofs into digestible pieces
+Use `references/agent-roles.md` for full role details. In brief: strengthen model definitions, assumptions, theorems, proofs, bounds, notation consistency, and closest-prior distinctions. Output LaTeX-ready theorem/proof blocks plus the surrounding explanatory text needed to make the theory feel motivated and credible.
 
 ## Experiment Agent Protocol
 
-When designing or improving experiments:
-1. Read claims in the paper -> design experiments that test each claim
-2. Ensure reproducibility: deterministic seeds, logged parameters, stated hardware
-3. For multiple independent scenarios, spawn parallel sub-agents:
-   ```
-   Task(subagent_type="general-purpose", prompt="Run scenario X...")
-   Task(subagent_type="general-purpose", prompt="Run scenario Y...")
-   ```
-4. Generate figures as PDF (matplotlib, seaborn, or pgfplots)
-5. Format tables in LaTeX with proper highlighting (bold best results)
-6. Write a brief results summary paragraph for each experiment
+Use `references/agent-roles.md` for full role details. In brief: map each claim to evidence, improve baselines/ablations/setup/analysis, ensure reproducibility, generate publication-quality figures/tables, and write the result interpretation needed for the paper to feel mature.
 
 ## Writing Agent Protocol
 
 When drafting or revising prose:
+- **Maturity before polish**: do not compress underdeveloped sections. If a section lacks motivation, mechanism, evidence, theorem/proof context, citation positioning, or analysis, expand it before polishing style.
+- **Use calibration**: use `paper_maturity_profile` to judge whether section depth, citation density, evidence discussion, and page-level presentation feel comparable to the anchor papers.
 - **Compression**: target the section length guidelines in review-criteria.md without removing the logic that helps the reader feel oriented.
 - **Precision**: when a claim feels vague, revise toward concrete mechanism, condition, evidence, number, or limitation.
 - **Honesty**: report limitations and cases where the method is not the best
@@ -460,14 +555,16 @@ When drafting or revising prose:
 
 When fixing formatting:
 1. Compile the paper, capture all warnings
-2. Fix overfull hbox warnings systematically:
+2. Run the Technical Layout Gate: unresolved references, serious overfull boxes, equation overflow, table width, figure readability, bibliography style, and venue format
+3. Fix overfull hbox warnings systematically:
    - Long equations: `align` -> `multline` with strategic line breaks
    - Repeated expressions: introduce abbreviations (e.g., `\Hb := \Mb^\top\Mb`)
    - Wide tables: `\footnotesize`, reduce `\tabcolsep`, abbreviate headers
    - Column vectors: use `bmatrix` instead of inline notation
    - Math spacing: `\!` for tightening, `\,` for slight separation
-3. Re-compile and verify zero warnings
-4. Check figure placement, page breaks, orphan lines
+4. Re-compile and verify serious technical layout problems are gone
+5. Run the PDF Aesthetic Layout Gate by looking at the compiled PDF as a reviewer would: section balance, text/formula density, figure/table placement, caption usefulness, white space, crowded pages, sparse pages, and final-page polish
+6. If the aesthetic problem is caused by missing content rather than formatting, return the issue to the Writing Agent or relevant specialist instead of only shrinking or spacing the page
 
 ## Resources
 
