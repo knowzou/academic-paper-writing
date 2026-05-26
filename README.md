@@ -15,6 +15,11 @@ The skill is designed for cases such as:
 ```text
 .
 ├── SKILL.md
+├── assets/
+│   └── readme/
+│       ├── overall-workflow.png
+│       ├── writing-agent-loop.png
+│       └── review-agent-system.png
 └── references/
     ├── agent-roles.md
     └── review-criteria.md
@@ -61,6 +66,34 @@ Defines the review rubric used by review agents, including:
 4. Run parallel review agents to assess the draft.
 5. Aggregate issues, revise, and repeat until the quality bar is met.
 
+## Workflow Diagrams
+
+### Overall Workflow
+
+![Overall workflow](assets/readme/overall-workflow.png)
+
+### Writing Agent Loop
+
+![Writing agent loop](assets/readme/writing-agent-loop.png)
+
+### Review Agent System
+
+![Review agent system](assets/readme/review-agent-system.png)
+
+## Suggested Starting Prompt
+
+```text
+Use the academic-paper-writing skill. Target: submit-ready, full-source workflow.
+
+First show the full workflow you will follow, including mode, source validation, calibration,
+maturity audit, initial maturity revision, review-revision loop, and final layout gates.
+Then execute it in order: related-paper calibration with 2-3 closest mature papers -> paper
+maturity audit -> initial maturity revision -> 4-reviewer review-revision loop. Do not stop
+after one edit or one review unless there is a real blocker, round limit, or I explicitly stop you.
+Keep the paper readable: the story, logic, contribution, technical strength, and evidence chain
+should be understandable to a technically adjacent reader.
+```
+
 ## Use Cases
 
 - NeurIPS / ICML / ICLR style ML papers
@@ -73,4 +106,3 @@ Defines the review rubric used by review agents, including:
 - This repository currently contains the skill specification and reference documents only.
 - It does not include paper source templates, experiment code, or LaTeX build tooling.
 - The workflow is intended to be adapted inside an agentic writing environment that can read `SKILL.md` and the reference files.
-
