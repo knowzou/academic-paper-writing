@@ -201,11 +201,17 @@ Treat these targets as reviewer-taste guidance, not rigid word-count rules. A se
 ### Prose
 
 - Is the abstract self-contained and informative?
+- Does the abstract progress from background/motivation -> what the paper does -> how it does it -> evidence and trade-offs?
 - Does the introduction clearly state the problem, gap, approach, and contributions?
+- Does the introduction progress from existing setting -> difference from prior work -> why decisions must be made before measurement -> solution and contributions?
 - Is the prose concise, or could major paragraphs lose 30% without losing information?
 - Are there repeated claims across intro, method, and conclusion?
 - Are all acronyms defined at first use?
 - Are limitations and discussion written with enough clarity to be credible?
+- Does the paper use `we` mainly for author actions, while letting background facts, mechanisms, assumptions, and results use their natural subjects?
+- Are concrete actions, mechanisms, numbers, theorems, experiments, and limitations used instead of generic `we show` claims or defensive reviewer-response language?
+- Are equations, experimental numbers, comparison boundaries, and limitations preserved while the narration is made clearer?
+- Are references clear and sentence openings varied, avoiding long runs of nominalizations or repeated sentence patterns?
 
 ## References & Scholarly Positioning
 

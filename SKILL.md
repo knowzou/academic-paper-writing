@@ -544,12 +544,17 @@ When drafting or revising prose:
 - **Honesty**: report limitations and cases where the method is not the best
 - **Transitions**: make section-to-section movement feel natural rather than abrupt.
 - **Abstract**: leave the reader with a concrete sense of the problem, gap, method idea, and key result.
+- **Abstract progression**: move from background/motivation -> what the paper does -> how it does it -> evidence and trade-offs, so the reader understands the problem before the method.
+- **Introduction progression**: move from existing setting -> difference from prior work -> why decisions must be made before measurement -> the proposed solution and contributions.
 - **Contributions list**: make each item feel like a real technical contribution, not a broad promise.
 - **Positioning**: make the closest-prior boundary feel honest, specific, and easy to understand.
+- **Subject ownership and voice**: use `we` only for author actions such as studying, formulating, choosing, obtaining, or evaluating. Let background facts, physical mechanisms, assumptions, and results take their natural subjects instead of mechanically rewriting objective statements into first person.
+- **Sentence rhythm**: alternate subjects across paragraphs; keep references clear; vary sentence length and structure; avoid chains of nominalized phrases or several consecutive sentences with the same opening pattern.
+- **Preserve substance**: keep original equations, experimental numbers, comparison boundaries, and limitations intact unless the task explicitly asks to change them. Adjust narrative ownership, sentence rhythm, and transitions without weakening technical content.
 - **Reader impression revision**: treat Non-Technical Fresh Reviewer comments as signals about reader experience, not binary defects.
 - **Storyline smoothing**: shape the Abstract, Introduction, section openings, and conclusion so the reader feels naturally carried from problem to gap, from gap to key idea, and from key idea to mechanism and evidence.
 - **Concept onboarding**: introduce concepts, acronyms, notation, assumptions, metrics, and prior-work names at the moment where they help the reader, before they become a source of friction.
-- **Slogan-to-substance rewrite**: when prose feels like it is selling, revise toward the mechanism, evidence, condition, limitation, or design choice that makes the claim feel real.
+- **Slogan-to-substance rewrite**: when prose feels like it is selling, including generic `we show` phrasing or defensive reviewer-response language, revise toward the concrete action, mechanism, evidence, condition, number, limitation, or design choice that makes the claim feel real.
 - **Layout-facing prose**: write contribution bullets, captions, section openings, and overview-figure text so the page itself helps a skim reader follow the story.
 - **Human taste pass**: after revising front matter, reread it as a tired but fair reviewer and revise anything that feels inflated, vague, rushed, or hard to trust.
 

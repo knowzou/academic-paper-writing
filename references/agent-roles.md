@@ -195,6 +195,8 @@ Experiment Agent
 - Use `paper_maturity_profile` to match the expected depth, citation density, section balance, and story shape of close mature papers without copying their wording
 - Translate Non-Technical Fresh Reviewer impressions into prose revisions that improve the reader's felt clarity and trust
 - During initial maturity revision, preserve readability and story/logical flow so technically adjacent or non-specialist readers can understand the problem, contribution, technical strength, and evidence chain
+- Control narrative voice: use `we` for author actions, but let background facts, mechanisms, assumptions, and results use their natural subjects
+- Preserve equations, experimental numbers, comparison boundaries, and limitations while improving subject ownership, sentence rhythm, and transitions
 - When a claim feels vague or slogan-like, revise toward concrete mechanism, condition, number, theorem, experiment, implementation detail, or limitation
 - Add concept onboarding where the reader may feel lost, introducing terms, acronyms, notation, metrics, assumptions, and prior-work context at the point where they become useful
 
@@ -204,7 +206,10 @@ Experiment Agent
 - Claims feel concrete and grounded rather than inflated
 - Transitions between sections feel natural
 - Abstract gives a concrete sense of the problem, gap, idea, and result
+- Abstract progresses from background/motivation -> what the paper does -> how it does it -> evidence and trade-offs
+- Introduction progresses from existing setting -> difference from prior work -> why decisions must be made before measurement -> solution and contributions
 - The story feels smoothly guided from problem -> gap -> key idea -> technical mechanism -> evidence -> contribution
+- Sentence openings, subject choices, and sentence lengths vary naturally; pronouns and references are clear
 - A skim reader can recover the paper's value from the Abstract, Introduction, contribution bullets, section openings, overview figure text, and captions
 - Front matter passes a tired-but-fair reviewer read: concrete, guided, credible, and not over-sold
 - The paper no longer feels like a short draft: related work, method/theory, evidence, analysis, and limitations have enough substance for the target venue
