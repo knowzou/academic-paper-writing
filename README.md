@@ -7,6 +7,7 @@ The skill is designed for cases such as:
 - Writing a paper from scratch from research results or notes
 - Revising an existing paper draft
 - Strengthening theory, experiments, or writing quality
+- Checking whether figures and tables actually support the paper's method, theory, and story
 - Converting a paper to a target venue format
 - Running a harsh multi-reviewer review loop before submission
 
@@ -34,6 +35,7 @@ The main skill definition. It describes:
 - Entry-point contextual Q&A
 - Mode dispatch for writing from scratch, revising a draft, or handling a focused task
 - Planner / Theory / Experiment / Writing / Layout agent responsibilities
+- Result-to-story evidence checks for figures, tables, claims, and trade-offs
 - A multi-round review-revise loop with historical and fresh reviewers
 
 ### `references/agent-roles.md`
@@ -51,6 +53,7 @@ Defines the review rubric used by review agents, including:
 
 - Scoring dimensions
 - Pass conditions
+- Evidence checks for whether results support the method, theory, and storyline
 - Section-level writing and layout checks
 - Review report template
 - Aggregation rules for multi-reviewer feedback
@@ -62,9 +65,11 @@ Defines the review rubric used by review agents, including:
    - write from scratch
    - revise an existing draft
    - handle a specific isolated task
-3. Dispatch specialist agents for theory, experiments, writing, and layout as needed.
-4. Run parallel review agents to assess the draft.
-5. Aggregate issues, revise, and repeat until the quality bar is met.
+3. Run calibration, maturity checks, and initial maturity revision for submit-ready work.
+4. Dispatch specialist agents for theory, experiments, writing, and layout as needed.
+5. Check whether figures/tables support the method, theory, and story.
+6. Run parallel review agents to assess the draft.
+7. Aggregate issues, revise, and repeat until the quality bar is met.
 
 ## Workflow Diagrams
 
@@ -91,7 +96,9 @@ Then execute it in order: related-paper calibration with 2-3 closest mature pape
 maturity audit -> initial maturity revision -> 4-reviewer review-revision loop. Do not stop
 after one edit or one review unless there is a real blocker, round limit, or I explicitly stop you.
 Keep the paper readable: the story, logic, contribution, technical strength, and evidence chain
-should be understandable to a technically adjacent reader.
+should be understandable to a technically adjacent reader. For every central figure/table,
+check whether the result supports the method, theory, and story, and flag anything a reviewer
+could use to attack the paper.
 ```
 
 ## Use Cases
