@@ -485,6 +485,7 @@ Read `references/review-criteria.md` for full criteria and report template. Key 
 - **Be harsh**: assume the reader is an expert reviewer at a top venue
 - **Be specific**: cite exact equations, figures, tables, line numbers
 - **Check every claim**: compare prose claims against actual numbers in tables
+- **Check result-to-story alignment**: judge whether each central figure/table supports the method, theory, and storyline claims it is supposed to support, and flag results that could be used to attack the paper.
 - **Check balance**: section lengths should match guidelines in review-criteria.md
 - **Check positioning**: compare the paper against the closest prior results and judge whether the distinction is clear and honestly discussed
 - **Check layout only as a gate note during iterative review**: serious layout blockers should be flagged, but layout is not a core scored dimension during the main loop
@@ -532,7 +533,7 @@ Use `references/agent-roles.md` for full role details. In brief: strengthen mode
 
 ## Experiment Agent Protocol
 
-Use `references/agent-roles.md` for full role details. In brief: map each claim to evidence, improve baselines/ablations/setup/analysis, ensure reproducibility, generate publication-quality figures/tables, and write the result interpretation needed for the paper to feel mature.
+Use `references/agent-roles.md` for full role details. In brief: map each claim to evidence, improve baselines/ablations/setup/analysis, ensure reproducibility, generate publication-quality figures/tables, check whether each result supports the method/theory/story it is meant to support, and write the result interpretation needed for the paper to feel mature.
 
 ## Writing Agent Protocol
 

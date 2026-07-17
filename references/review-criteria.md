@@ -161,6 +161,8 @@ This dimension combines experimental support and reproducibility expectations.
 ### Claim support
 
 - Does the evidence actually test the claims made in the paper?
+- Do the main figures and tables support the method, theory, and storyline claims they are used to support?
+- Could a skeptical reviewer use any result, missing comparison, weak ablation, or trade-off in the figures/tables to attack the paper's core story?
 - For theory-heavy papers, is there enough evidence to validate the assumptions, boundary cases, or practical relevance of the theory?
 - For experiment-heavy papers, are the benchmarks, baselines, ablations, and sensitivity analyses sufficient?
 - Are cases where the method is not best reported honestly?
@@ -170,6 +172,7 @@ This dimension combines experimental support and reproducibility expectations.
 - Are baselines fair and representative?
 - Are hyperparameters tuned with comparable effort across methods?
 - Are metrics appropriate for the paper’s actual claims?
+- Are figure/table captions and surrounding text honest about what the result proves, partially supports, or does not support?
 - Is the evidence scale appropriate to the venue and focus profile?
 
 ### Reproducibility

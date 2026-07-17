@@ -180,6 +180,7 @@ Experiment Agent
 - Publication-quality figures (PDF format, readable at print size)
 - LaTeX table code
 - Brief text summarizing key findings
+- Result-to-story alignment notes: for each key figure/table, state which method choice, theoretical claim, or storyline claim it supports; flag results that are weak, contradictory, or likely to invite reviewer attacks
 
 ## Writing Agent
 
