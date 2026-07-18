@@ -181,6 +181,7 @@ Experiment Agent
 - LaTeX table code
 - Brief text summarizing key findings
 - Result-to-story alignment notes: for each key figure/table, state which method choice, theoretical claim, or storyline claim it supports; flag results that are weak, contradictory, or likely to invite reviewer attacks
+- Paper-ready prose, not developer logs: do not dump raw run logs, shell traces, or file-system interaction records into the paper text unless the paper's contribution is about the trace itself
 
 ## Writing Agent
 

@@ -547,6 +547,7 @@ When drafting or revising prose:
 - **Abstract**: leave the reader with a concrete sense of the problem, gap, method idea, and key result.
 - **Abstract progression**: move from background/motivation -> what the paper does -> how it does it -> evidence and trade-offs, so the reader understands the problem before the method.
 - **Introduction progression**: move from existing setting -> difference from prior work -> why decisions must be made before measurement -> the proposed solution and contributions.
+- **Paper voice**: avoid developer-documentation phrasing in the main paper text. Prefer paper language over workflow language; do not narrate folders, files, scripts, commands, or execution traces unless the paper's contribution is explicitly about that trace or system behavior.
 - **Contributions list**: make each item feel like a real technical contribution, not a broad promise.
 - **Positioning**: make the closest-prior boundary feel honest, specific, and easy to understand.
 - **Subject ownership and voice**: use `we` only for author actions such as studying, formulating, choosing, obtaining, or evaluating. Let background facts, physical mechanisms, assumptions, and results take their natural subjects instead of mechanically rewriting objective statements into first person.
@@ -557,6 +558,7 @@ When drafting or revising prose:
 - **Concept onboarding**: introduce concepts, acronyms, notation, assumptions, metrics, and prior-work names at the moment where they help the reader, before they become a source of friction.
 - **Slogan-to-substance rewrite**: when prose feels like it is selling, including generic `we show` phrasing or defensive reviewer-response language, revise toward the concrete action, mechanism, evidence, condition, number, limitation, or design choice that makes the claim feel real.
 - **Layout-facing prose**: write contribution bullets, captions, section openings, and overview-figure text so the page itself helps a skim reader follow the story.
+- **No log dumping**: keep raw run logs, file-system interaction logs, shell traces, and step-by-step execution records out of the paper body unless they are the actual object of study. If reproducibility matters, compress them into concise setup details, seeds, hardware, datasets, and evaluation settings.
 - **Human taste pass**: after revising front matter, reread it as a tired but fair reviewer and revise anything that feels inflated, vague, rushed, or hard to trust.
 
 ## Layout Agent Protocol

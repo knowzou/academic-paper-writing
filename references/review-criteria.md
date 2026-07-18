@@ -181,6 +181,7 @@ This dimension combines experimental support and reproducibility expectations.
 - Are random seeds, hyperparameters, and hardware/environment details reported where needed?
 - Can a reasonable reader reproduce the main evidence from the information provided?
 - Are experiment scripts, theorem-checking scripts, or notebooks included or referenced when relevant?
+- Are reproducibility details concise and paper-like, rather than a dump of run logs, shell traces, or file-system interaction records?
 
 ## Writing & Structure
 
@@ -211,6 +212,7 @@ Treat these targets as reviewer-taste guidance, not rigid word-count rules. A se
 - Are there repeated claims across intro, method, and conclusion?
 - Are all acronyms defined at first use?
 - Are limitations and discussion written with enough clarity to be credible?
+- Does the paper read like a paper rather than a developer document, avoiding command-by-command workflow narration or file/path/log talk in the main text?
 - Does the paper use `we` mainly for author actions, while letting background facts, mechanisms, assumptions, and results use their natural subjects?
 - Are concrete actions, mechanisms, numbers, theorems, experiments, and limitations used instead of generic `we show` claims or defensive reviewer-response language?
 - Are equations, experimental numbers, comparison boundaries, and limitations preserved while the narration is made clearer?
